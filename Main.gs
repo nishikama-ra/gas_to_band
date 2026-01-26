@@ -54,8 +54,28 @@ function checkGmailAndPostToBand() {
     for (const data of targetData) {
       const message = data.message;
       const senderEmail = data.senderKey;
+      const subject = message.getSubject();
 
       try {
+        // --- 汎用フィルタ処理 ---
+        const filterConfig = CONFIG.MAIL_FILTERS[senderEmail];
+        if (filterConfig) {
+          const body = message.getPlainBody();
+          const contentForCheck = body + subject;
+
+          const routeReg = new RegExp(filterConfig.priorityRoutes.join('|'));
+          const keywordReg = new RegExp(filterConfig.criticalKeywords.join('|'));
+
+          const isPriorityRoute = routeReg.test(contentForCheck);
+          const isCriticalIssue = keywordReg.test(body);
+
+          if (!isPriorityRoute && !isCriticalIssue) {
+            console.log(`フィルタによりスキップ: ${subject}`);
+            message.markRead();
+            continue; 
+          }
+        }
+
         const postBody = createPostBody(message, senderEmail);
         if (!postBody) throw new Error("本文の生成に失敗しました。");
 
