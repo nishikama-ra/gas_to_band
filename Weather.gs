@@ -1,4 +1,11 @@
 /**
+ * 定期実行用
+ */
+function triggerWeather() {
+  postWeatherToBand();
+}
+
+/**
  * 指定座標の3時間おき予報をBANDに投稿する（リトライ＋エラーメール通知版）
  */
 function postWeatherToBand() {
@@ -101,13 +108,6 @@ ${errorMessage}
   }
 }
 
-function triggerWeather() {
-  postWeatherToBand();
-}
-
-/**
- * 定期実行用
- */
 function triggerWeather() {
   postWeatherToBand();
 }
