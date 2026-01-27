@@ -77,29 +77,40 @@ function postToBand(content, fileUrls = []) {
 }
 
 /**
- * 特定住所検知時に別のBANDへ投稿する専用関数
+ * 特定住所検知時に別のBANDへ投稿する専用関数（文言加工なし版）
  */
 function postToExtraBand(content, fileUrls = []) {
   const endpoint = 'https://openapi.band.us/v2.2/band/post/create';
   let finalContent = content;
 
+  // 添付ファイルがある場合のみ、末尾にURLを追加
   if (fileUrls.length > 0) {
     finalContent += "\n\n------------------\n添付資料\n" + fileUrls.join('\n');
   }
 
   const payload = {
     'access_token': CONFIG.BAND_ACCESS_TOKEN,
-    'band_key': CONFIG.EXTRA_POST_CONFIG.TARGET_BAND_KEY, // ここが別BANDのキー
+    'band_key': CONFIG.EXTRA_BAND_KEY,
     'content': finalContent,
     'do_push': true
   };
 
   try {
-    UrlFetchApp.fetch(endpoint, {
+    const response = UrlFetchApp.fetch(endpoint, {
       'method': 'post',
-      'payload': payload
+      'payload': payload,
+      'muteHttpExceptions': true
     });
+
+    const resText = response.getContentText();
+    const json = JSON.parse(resText);
+
+    if (json.result_code === 1) {
+      console.log("★成功：別BANDへの転送投稿が完了しました。");
+    } else {
+      console.error(`★失敗：別BAND投稿エラー: コード=${json.result_code}, 内容=${resText}`);
+    }
   } catch (e) {
-    console.error(`別BANDへの投稿エラー: ${e.message}`);
+    console.error(`★エラー：通信エラーが発生しました: ${e.message}`);
   }
 }
