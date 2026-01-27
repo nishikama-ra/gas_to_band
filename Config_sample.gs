@@ -6,13 +6,13 @@ const CONFIG = {
   TARGET_BAND_KEY: 'XXXXXXXXXXXXXXXXXXXXXXXX', 
   // 添付ファイルがあった際の格納先GoogleDriveのフォルダ  
   IMAGE_FOLDER_ID: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
- 
-  // --- 実行制御 ---
+   // --- 実行制御 ---
   MAX_THREADS_PER_RUN: 15, 
 
   // --- タグ定義 ---
   TAGS: {
     BOUHAN: '#防犯',
+    TRAIN: '#鉄道運行情報',
     NONE: null
   },
 
@@ -36,7 +36,6 @@ const CONFIG = {
     }
   },
 
-
   // --- メールフィルタ設定 ---
   // 送信元アドレスをキーにして、個別のフィルタ条件を定義します
   MAIL_FILTERS: {
@@ -51,7 +50,7 @@ const CONFIG = {
   SENDERS: {
     'kamakura@sg-p.jp': ['KAMAKURA', 'BOUHAN'],
     'oshirase@kodomoanzen.police.pref.kanagawa.jp': ['POLICE', 'BOUHAN'],
-    'unkou@jorudan.co.jp': ['JORUDAN', 'NONE']
+    'unkou@jorudan.co.jp': ['JORUDAN', 'TRAIN']
   },
 
   // --- エラー通知メール設定 ---
@@ -74,13 +73,15 @@ const CONFIG = {
   },
 
 // --- 天気予報設定 ---
+// LATITUDE: "35.322356",
+// LONGITUDE: "139.502873",
   WEATHER_CONFIG: {
     LATITUDE: "35.322356",
     LONGITUDE: "139.502873",
-    TITLE: "【西鎌倉 3時間おき予報】",
+    TITLE: "【西鎌倉 3時間おき天気予報 （自動投稿）】",
     TAG: "#天気予報",
     // 投稿に含める予報の件数（8件で24時間分）
-    FOOTER: "地点：西鎌倉交差点周辺（北緯35.322356 東経139.502873）\n提供：Open-Meteo",
+    FOOTER: "地点：西鎌倉交差点（北緯35.322356 東経139.502873）\n提供：Open-Meteo",
     WEATHER_FORECAST_COUNT: 12, 
     // Open-Meteo WMO天気コード変換表
 WEATHER_MAP: {
@@ -106,3 +107,4 @@ WEATHER_MAP: {
     },
   }
 };
+
