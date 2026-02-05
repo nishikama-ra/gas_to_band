@@ -77,6 +77,7 @@ const CONFIG = {
   ERROR_MAIL: {
     // 宛先をプロパティ「ERROR_MAIL_TO」から取得
     TO: PropertiesService.getScriptProperties().getProperty('ERROR_MAIL_TO'),
+    
     SUBJECT: '【GASエラー通知】Gmail to BAND連携',
     TEMPLATE: `
 ■発生したエラー:
@@ -101,7 +102,7 @@ const CONFIG = {
     LONGITUDE: "139.502873",
     TITLE: "【西鎌倉 3時間おき天気予報】",
     TAG: "#天気予報",
-    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点 / 提供: Open-Meteo",
+    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点 / 提供: OpenWeatherMap",
     WEATHER_FORECAST_COUNT: 12,
     
     // 実行制御（10分で見切り、1分弱でリトライ）
@@ -109,17 +110,20 @@ const CONFIG = {
     MAX_RETRIES: 12,
     WAIT_TIME_BASE: 50000,
     
-    // APIパラメータ（一括管理）
-    API_PARAMS: [
-      "temperature_2m",
-      "weathercode",
-      "precipitation_probability",
-      "relative_humidity_2m",
-      "wind_speed_10m",
-      "wind_direction_10m"
-    ].join(","),
+    // OpenWeatherMap ID判定用（日本向け表示定義）
+    WEATHER_MAP_OWM: [
+      { min: 200, max: 299, emoji: "⛈️", label: "雷雨" },
+      { min: 300, max: 399, emoji: "☔", label: "弱い雨" },
+      { min: 500, max: 501, emoji: "🌦️", label: "小雨" },
+      { min: 502, max: 531, emoji: "☔", label: "雨" },
+      { min: 600, max: 699, emoji: "❄️", label: "雪" },
+      { min: 700, max: 799, emoji: "🌫️", label: "霧" },
+      { min: 800, max: 800, emoji: "☀️", label: "快晴" },
+      { min: 801, max: 801, emoji: "🌤️", label: "晴れ" },
+      { min: 802, max: 804, emoji: "☁️", label: "曇り" }
+    ],
 
-    // 方位の定義
+    // 方位の定義（原文の記号を完全に再現）
     WIND_DIRECTIONS: [
       { label: "北", arrow: "⬇️" },
       { label: "北東", arrow: "↙️" },
@@ -129,29 +133,6 @@ const CONFIG = {
       { label: "南西", arrow: "↗️" },
       { label: "西", arrow: "➡️" },
       { label: "北西", arrow: "↘️" }
-    ],
-
-    // Open-Meteo WMO天気コード変換表
-    WEATHER_MAP: {
-      0: "☀️ 快晴",
-      1: "🌤️ 晴れ",
-      2: "⛅ 晴れ時々曇り",
-      3: "☁️ 曇り",
-      45: "🌫️ 霧",
-      48: "🌫️ 霧",
-      51: "🌦️ 弱い霧雨",
-      53: "🌦️ 霧雨",
-      55: "🌦️ 強い霧雨",
-      61: "☔ 小雨",
-      63: "☔ 雨",
-      65: "☔ 強い雨",
-      71: "❄️ 弱い雪",
-      73: "❄️ 雪",
-      75: "❄️ 大雪",
-      80: "🌦️ 弱いにわか雨",
-      81: "🌦️ にわか雨",
-      82: "🌦️ 強いにわか雨",
-      95: "⚡ 雷雨"
-    }
+    ]
   }
 };
