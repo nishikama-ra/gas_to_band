@@ -1,14 +1,16 @@
 const CONFIG = {
   // --- 接続情報 ---
-  // BAND DevelopersのMyAPIで取得したアクセストークン
-  BAND_ACCESS_TOKEN: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  // 投稿先のBANDのキー（BandHelper.gsのgetBandList関数で取得可能）
-  TARGET_BAND_KEY: 'XXXXXXXXXXXXXXXXXXXXXXXX', 
-  // 添付ファイルがあった際の格納先GoogleDriveのフォルダ  
-  IMAGE_FOLDER_ID: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  // --- 実行制御 ---
-  MAX_THREADS_PER_RUN: 15, 
+  // プロパティ「BAND_TOKEN」から取得
+  BAND_ACCESS_TOKEN: PropertiesService.getScriptProperties().getProperty('BAND_TOKEN'),
+  
+  // 実行時に注入されるため空でOK
+  TARGET_BAND_KEY: '',  
+  EXTRA_BAND_KEY: '',   
 
+  // --- 添付ファイルフォルダID（プロパティから取得） ---
+  IMAGE_FOLDER_ID: PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID'),
+  
+  MAX_THREADS_PER_RUN: 15,
   // --- タグ定義 ---
   TAGS: {
     BOUHAN: '#防犯',
@@ -73,7 +75,8 @@ const CONFIG = {
 
   // --- エラー通知メール設定 ---
   ERROR_MAIL: {
-    TO: 'xxxxxx@xxxx.xxx',
+    // 宛先をプロパティ「ERROR_MAIL_TO」から取得
+    TO: PropertiesService.getScriptProperties().getProperty('ERROR_MAIL_TO'),
     SUBJECT: '【GASエラー通知】Gmail to BAND連携',
     TEMPLATE: `
 ■発生したエラー:
@@ -152,5 +155,3 @@ const CONFIG = {
     }
   }
 };
-
-
