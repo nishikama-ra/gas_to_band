@@ -99,7 +99,7 @@ const CONFIG = {
   WEATHER_CONFIG: {
     LATITUDE: "35.322356",
     LONGITUDE: "139.502873",
-    TITLE: "【西鎌倉 3時間おき詳細予報】",
+    TITLE: "【西鎌倉 3時間おき天気予報】",
     TAG: "#天気予報",
     FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点 / 提供: Open-Meteo",
     WEATHER_FORECAST_COUNT: 12,
