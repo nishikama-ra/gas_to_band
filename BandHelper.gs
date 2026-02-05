@@ -114,3 +114,22 @@ function postToExtraBand(content, fileUrls = []) {
     console.error(`★エラー：通信エラーが発生しました: ${e.message}`);
   }
 }
+
+/**
+ * 実行モード（本番/テスト）に応じて宛先キーをConfigにセットする
+ * @param {string} mode - 'PROD' または 'TEST'
+ */
+function setBandDestination(mode) {
+  const props = PropertiesService.getScriptProperties();
+  if (mode === 'PROD') {
+    CONFIG.TARGET_BAND_KEY = props.getProperty('KEY_PROD_MAIN');
+    CONFIG.EXTRA_BAND_KEY = props.getProperty('KEY_PROD_EXTRA');
+  } else {
+    CONFIG.TARGET_BAND_KEY = props.getProperty('KEY_TEST_MAIN');
+    CONFIG.EXTRA_BAND_KEY = props.getProperty('KEY_TEST_EXTRA');
+  }
+  
+  if (!CONFIG.TARGET_BAND_KEY) {
+    throw new Error(`設定エラー: モード ${mode} の宛先キーがプロパティに見つかりません。`);
+  }
+}
