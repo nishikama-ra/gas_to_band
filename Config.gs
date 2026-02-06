@@ -48,6 +48,7 @@ const CONFIG = {
   // 送信元アドレスをキーにして、個別のフィルタ条件を定義します
   MAIL_FILTERS: {
      'alerts-transit@mail.yahoo.co.jp': {
+      isYahooTransit: true, // Yahoo特有の広告除去ロジックを有効化
       priorityRoutes: ['湘南モノレール', '江ノ島電鉄'], // 監視したい路線を追加
       criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開']
     }
@@ -63,6 +64,7 @@ const CONFIG = {
 // --- 追加：特定の住所が含まれる場合の転送先設定 ---
   EXTRA_POST_CONFIG: {
   // ※キーは上部の「EXTRA_BAND_KEY」を参照
+    ENABLED_SENDERS: ['oshirase@kodomoanzen.police.pref.kanagawa.jp'],
     WATCH_ADDRESSES: [
       // 腰越地区
       '鎌倉市西鎌倉', '鎌倉市腰越', '鎌倉市津', '鎌倉市津西', '鎌倉市七里ガ浜', '鎌倉市七里ガ浜東',
@@ -77,7 +79,6 @@ const CONFIG = {
   ERROR_MAIL: {
     // 宛先をプロパティ「ERROR_MAIL_TO」から取得
     TO: PropertiesService.getScriptProperties().getProperty('ERROR_MAIL_TO'),
-    
     SUBJECT: '【GASエラー通知】Gmail to BAND連携',
     TEMPLATE: `
 ■発生したエラー:
