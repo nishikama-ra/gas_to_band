@@ -3,7 +3,7 @@
  */
 function postPollenToBand() {
   const conf = CONFIG.POLLEN_CONFIG;
-  // URLの構築（パラメータを安全に結合）
+  // URLの構築
   const baseUrl = "https://air-quality-api.open-meteo.com/v1/air-quality";
   const url = `${baseUrl}?latitude=${conf.LATITUDE}&longitude=${conf.LONGITUDE}&hourly=${conf.API_PARAMS}&timezone=Asia%2FTokyo&forecast_days=5`;
 
@@ -23,8 +23,9 @@ function postPollenToBand() {
 
     for (let i = 0; i < hourly.time.length; i++) {
       const dateStr = hourly.time[i].split('T')[0]; 
-      const cedar = hourly.cedar_pollen[i];
-      const birch = hourly.birch_pollen[i];
+      // API_PARAMSに合わせて取得キーを変更（alnus_pollenを利用）
+      const cedar = hourly.alnus_pollen ? hourly.alnus_pollen[i] : 0;
+      const birch = hourly.birch_pollen ? hourly.birch_pollen[i] : 0;
 
       if (!dailyData[dateStr]) {
         dailyData[dateStr] = { maxCedar: 0, maxBirch: 0 };
@@ -47,7 +48,7 @@ function postPollenToBand() {
       const birchStatus = getPollenLabel(info.maxBirch);
 
       body += `${dayLabel}\n`;
-      body += `  スギ: ${cedarStatus.emoji}${cedarStatus.text} (${Math.round(info.maxCedar)})\n`;
+      body += `  スギ(相当): ${cedarStatus.emoji}${cedarStatus.text} (${Math.round(info.maxCedar)})\n`;
       body += `  ヒノキ系: ${birchStatus.emoji}${birchStatus.text} (${Math.round(info.maxBirch)})\n\n`;
     });
 
