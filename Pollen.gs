@@ -3,8 +3,9 @@
  */
 function postPollenToBand() {
   const conf = CONFIG.POLLEN_CONFIG;
-  // Open-Meteo Air Quality API
-  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${conf.LATITUDE}&longitude=${conf.LONGITUDE}&hourly=${conf.API_PARAMS}&timezone=Asia%2FTokyo&forecast_days=5`;
+  // URLの構築（パラメータを安全に結合）
+  const baseUrl = "https://air-quality-api.open-meteo.com/v1/air-quality";
+  const url = `${baseUrl}?latitude=${conf.LATITUDE}&longitude=${conf.LONGITUDE}&hourly=${conf.API_PARAMS}&timezone=Asia%2FTokyo&forecast_days=5`;
 
   try {
     const response = UrlFetchApp.fetch(url, { 'muteHttpExceptions': true });
@@ -56,12 +57,8 @@ function postPollenToBand() {
     console.log("BANDへの花粉情報投稿が完了しました。");
 
   } catch (e) {
-    // 天気予報側のエラー通知メール関数を流用
-    if (typeof sendWeatherErrorMail === "function") {
-      sendWeatherErrorMail("花粉情報解析エラー: " + e.message);
-    } else {
-      console.error("エラー: " + e.message);
-    }
+    console.error("花粉情報解析エラー: " + e.message);
+    throw e; 
   }
 }
 
