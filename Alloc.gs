@@ -26,9 +26,6 @@ function doGet(e) {
     if (type === 'weather') {
       postWeatherToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 天気予報を投稿しました</h2>`);
-    } else if (type === 'pollen') {
-      postPollenToBand();
-      return HtmlService.createHtmlOutput(`<h2>${label} 花粉情報を投稿しました</h2>`);
     } else if (type === 'traffic') {
       checkGmailAndPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 鉄道運行情報を確認・投稿しました</h2>`);
@@ -72,20 +69,4 @@ function triggerWeather_Production() {
 function debug_WeatherTest() {
   setBandDestination('TEST');
   postWeatherToBand();
-}
-
-/**
- * 【本番用】花粉情報トリガー
- */
-function triggerPollen_Production() {
-  setBandDestination('PROD');
-  postPollenToBand();
-}
-
-/**
- * 【テスト用】花粉情報デバッグ
- */
-function debug_PollenTest() {
-  setBandDestination('TEST');
-  postPollenToBand();
 }
