@@ -75,44 +75,64 @@ function checkJmaAndPostToBand() {
       console.log("投稿処理が完了しました。");
     }
 
-    // 地震情報の監視
-    const resQuake = UrlFetchApp.fetch(conf.URL_QUAKE);
-    const dataQuake = JSON.parse(resQuake.getContentText());
-    dataQuake.forEach(report => {
-      if (report.datetime <= lastCheck) return;
-      if (parseInt(report.maxInt) < 3) return;
-      const isKanagawa = report.areas && report.areas.some(a => a.pref === "神奈川県");
-      if (isKanagawa) {
-        postToBand(`#防災情報\n【地震情報】最大震度${report.maxInt}を観測しました。\n地域：${report.headline}`);
-        if (report.datetime > latestDateTime) latestDateTime = report.datetime;
-      }
-    });
+    // 地震・津波・火山フィードの監視
+    const feedUrl = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml";
+    const resFeed = UrlFetchApp.fetch(feedUrl);
+    const xmlFeed = resFeed.getContentText();
+    const entries = xmlFeed.split("<entry>");
 
-    // 津波情報の監視
-    const resTsunami = UrlFetchApp.fetch(conf.URL_TSUNAMI);
-    const dataTsunami = JSON.parse(resTsunami.getContentText());
-    dataTsunami.forEach(report => {
-      if (report.datetime <= lastCheck) return;
-      const hasTargetRegion = report.areas && report.areas.some(a => a.name === "相模湾・三浦半島");
-      if (hasTargetRegion) {
-        postToBand(`#防災情報\n【津波情報】${report.headline}`);
-        if (report.datetime > latestDateTime) latestDateTime = report.datetime;
-      }
-    });
+    for (let i = 1; i < entries.length; i++) {
+      const entry = entries[i];
+      const updatedMatch = entry.match(/<updated>(.*?)<\/updated>/);
+      if (!updatedMatch) continue;
+      const updated = updatedMatch[1];
+      if (updated <= lastCheck) continue;
 
-    // 火山・降灰情報の監視
-    const resVolcano = UrlFetchApp.fetch(conf.URL_VOLCANO);
-    const dataVolcano = JSON.parse(resVolcano.getContentText());
-    dataVolcano.forEach(report => {
-      if (report.datetime <= lastCheck) return;
-      const watchVolcanoes = ["富士山", "箱根山", "伊豆東部火山群"];
-      const isWatchVolcano = watchVolcanoes.includes(report.volcanoName);
-      const isKanagawaAsh = report.ashFallAreas && report.ashFallAreas.some(a => a.includes("神奈川"));
-      if (isWatchVolcano || isKanagawaAsh) {
-        postToBand(`#防災情報\n【火山・降灰情報】${report.headline}`);
-        if (report.datetime > latestDateTime) latestDateTime = report.datetime;
+      const titleMatch = entry.match(/<title>(.*?)<\/title>/);
+      const linkMatch = entry.match(/<link\s+type="application\/xml"\s+href="(.*?)"/);
+      if (!titleMatch || !linkMatch) continue;
+
+      const title = titleMatch[1];
+      const detailUrl = linkMatch[1];
+
+      // 地震情報の判定
+      if (title.includes("震源・震度")) {
+        const resDetail = UrlFetchApp.fetch(detailUrl);
+        const xmlDetail = resDetail.getContentText();
+        if (xmlDetail.includes("神奈川県")) {
+          const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
+          const headline = contentMatch ? contentMatch[1] : title;
+          postToBand(`#防災情報\n【地震情報】\n${headline}`);
+          if (updated > latestDateTime) latestDateTime = updated;
+        }
       }
-    });
+
+      // 津波情報の判定
+      if (title.includes("津波")) {
+        const resDetail = UrlFetchApp.fetch(detailUrl);
+        const xmlDetail = resDetail.getContentText();
+        if (xmlDetail.includes("相模湾・三浦半島")) {
+          const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
+          const headline = contentMatch ? contentMatch[1] : title;
+          postToBand(`#防災情報\n【津波情報】\n${headline}`);
+          if (updated > latestDateTime) latestDateTime = updated;
+        }
+      }
+
+      // 火山情報の判定
+      if (title.includes("火山") || title.includes("降灰")) {
+        const resDetail = UrlFetchApp.fetch(detailUrl);
+        const xmlDetail = resDetail.getContentText();
+        const watchVolcanoes = ["富士山", "箱根山", "伊豆東部火山群"];
+        const isWatchVolcano = watchVolcanoes.some(v => xmlDetail.includes(v));
+        if (isWatchVolcano || xmlDetail.includes("神奈川県")) {
+          const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
+          const headline = contentMatch ? contentMatch[1] : title;
+          postToBand(`#防災情報\n【火山・降灰情報】\n${headline}`);
+          if (updated > latestDateTime) latestDateTime = updated;
+        }
+      }
+    }
 
     // 処理した最新時刻を保存
     if (latestDateTime !== lastCheck) {
