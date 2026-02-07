@@ -111,19 +111,33 @@ const CONFIG = {
     MAX_RETRIES: 12,
     WAIT_TIME_BASE: 50000,
     
-    // OpenWeatherMap ID判定用（日本向け表示定義）
+  // OpenWeatherMap ID判定用（日本向け表示定義）
     WEATHER_MAP_OWM: [
-      { min: 200, max: 299, emoji: "⛈️", label: "雷雨" },
-      { min: 300, max: 399, emoji: "☔", label: "弱い雨" },
-      { min: 500, max: 501, emoji: "🌦️", label: "小雨" },
-      { min: 502, max: 531, emoji: "☔", label: "雨" },
-      { min: 600, max: 699, emoji: "❄️", label: "雪" },
-      { min: 700, max: 799, emoji: "🌫️", label: "霧" },
+      { min: 200, max: 209, emoji: "⛈️", label: "雷雨" },
+      { min: 210, max: 221, emoji: "🌩️", label: "雷" },
+      { min: 230, max: 299, emoji: "⛈️", label: "雷雨" },
+      { min: 300, max: 399, emoji: "☂️", label: "霧雨" },
+      { min: 500, max: 500, emoji: "☂️", label: "小雨" },
+      { min: 501, max: 501, emoji: "☂️", label: "雨" },
+      { min: 502, max: 502, emoji: "☔", label: "強い雨" },
+      { min: 503, max: 503, emoji: "☔", label: "激しい雨" },
+      { min: 504, max: 504, emoji: "☔", label: "猛烈な雨" },
+      { min: 511, max: 511, emoji: "❄️", label: "氷雨" },
+      { min: 520, max: 531, emoji: "🌧️", label: "にわか雨" },
+      { min: 600, max: 600, emoji: "🌨️", label: "小雪" },
+      { min: 601, max: 601, emoji: "☃️", label: "雪" },
+      { min: 602, max: 602, emoji: "☃️", label: "強い雪" },
+      { min: 611, max: 616, emoji: "❄️", label: "みぞれ" },
+      { min: 620, max: 699, emoji: "☃️", label: "にわか雪" },
+      { min: 701, max: 762, emoji: "🌫️", label: "霧" },
+      { min: 771, max: 771, emoji: "⛈️", label: "スコール" },
+      { min: 781, max: 781, emoji: "🌪️", label: "竜巻" },
       { min: 800, max: 800, emoji: "☀️", label: "快晴" },
-      { min: 801, max: 801, emoji: "🌤️", label: "晴れ" },
-      { min: 802, max: 804, emoji: "☁️", label: "曇り" }
+      { min: 801, max: 801, emoji: "☀️", label: "晴れ" },
+      { min: 802, max: 802, emoji: "⛅", label: "時々曇り" },
+      { min: 803, max: 804, emoji: "☁️", label: "曇り" }
     ],
-
+    
     // 方位の定義
     WIND_DIRECTIONS: [
       { label: "北", arrow: "⬇️" },
