@@ -35,7 +35,7 @@ function doGet(e) {
       return HtmlService.createHtmlOutput(`<h2>${label} 防災情報を確認・投稿しました</h2>`);
     } else if (type === 'announce') {
       MonthlySecPostToBand();
-      return HtmlService.createHtmlOutput(`<h2>${label} セキュリティ通知を投稿しました</h2>`);
+      return HtmlService.createHtmlOutput(`<h2>${label} お知らせ（セキュリティ通知）を投稿しました</h2>`);
     } 
   } catch (err) {
     return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
@@ -96,7 +96,7 @@ function bousai_TestRun() {
 }
 
 /**
- * 【本番用】セキュリティ通知トリガー
+ * 【本番用】定期お知らせ投稿トリガー
  */
 function triggerAnnounce_Production() {
   setBandDestination('PROD');
@@ -104,7 +104,7 @@ function triggerAnnounce_Production() {
 }
 
 /**
- * 【テスト用】セキュリティ通知デバッグ
+ * 【テスト用】定期お知らせ投稿デバッグ
  */
 function debug_AnnounceTest() {
   setBandDestination('TEST');
