@@ -4,12 +4,14 @@
 function checkJmaAndPostToBand() {
   const conf = CONFIG.BOUSAI_CONFIG;
   const master = conf.MASTER;
+  const scriptProps = PropertiesService.getScriptProperties();
   
-  // 前回チェック時の最新日時を取得
-  const lastCheck = PropertiesService.getScriptProperties().getProperty('LAST_JMA_DATETIME') || "";
+  const lastCheck = scriptProps.getProperty('LAST_JMA_DATETIME') || "";
+  const lastPostedContent = scriptProps.getProperty('LAST_JMA_POST_CONTENT') || "";
   let latestDateTime = lastCheck;
 
   try {
+    // --- 1. 気象警報・注意報セクション ---
     const resWarning = UrlFetchApp.fetch(conf.URL_WARNING);
     const dataWarning = JSON.parse(resWarning.getContentText());
     
@@ -23,63 +25,45 @@ function checkJmaAndPostToBand() {
       }
     }
 
-    if (!cityData) {
-      console.log("指定地点のデータが見つかりません。");
-      return;
-    }
+    if (cityData) {
+      let activeMessages = [];
+      let maxLevel = 3; 
+      let hasUpdate = false;
 
-    let activeMessages = [];
-    let maxLevel = 3; 
-    let hasUpdate = false;
-
-    cityData.warnings.forEach(w => {
-      const msg = master.special_warnings[w.code] || 
-                  master.warnings[w.code] || 
-                  master.advisories[w.code];
-      
-      if (msg) {
-        const statusLabel = (w.status === "解除") ? "（解除）" : "";
-        activeMessages.push(msg + statusLabel);
-
-        if (w.status !== "継続") {
-          hasUpdate = true;
-        }
-
-        if (w.status !== "解除") {
-          if (master.special_warnings[w.code]) {
-            maxLevel = Math.min(maxLevel, 1);
-          } else if (master.warnings[w.code]) {
-            maxLevel = Math.min(maxLevel, 2);
-          } else if (master.advisories[w.code]) {
-            maxLevel = Math.min(maxLevel, 3);
+      cityData.warnings.forEach(w => {
+        const msg = master.special_warnings[w.code] || 
+                    master.warnings[w.code] || 
+                    master.advisories[w.code];
+        
+        if (msg) {
+          const statusLabel = (w.status === "解除") ? "（解除）" : "";
+          activeMessages.push(msg + statusLabel);
+          if (w.status !== "継続") hasUpdate = true;
+          if (w.status !== "解除") {
+            if (master.special_warnings[w.code]) maxLevel = Math.min(maxLevel, 1);
+            else if (master.warnings[w.code]) maxLevel = Math.min(maxLevel, 2);
+            else if (master.advisories[w.code]) maxLevel = Math.min(maxLevel, 3);
           }
         }
+      });
+
+      if (activeMessages.length > 0 && hasUpdate) {
+        const sortedContent = activeMessages.sort().join('\n');
+        let levelLabel = (maxLevel === 1) ? "特別警報" : (maxLevel === 2) ? "警報・注意報" : "注意報";
+        const header = conf.TITLE_PREFIX + "気象情報" + conf.TITLE_SUFFIX;
+        const body = header + "\n" + levelLabel + "が発表されています。\n\n" + sortedContent;
+
+        if (body !== lastPostedContent) {
+          postToBand(body);
+          scriptProps.setProperty('LAST_JMA_POST_CONTENT', body);
+          console.log("気象警報・注意報の投稿が完了しました。");
+          Utilities.sleep(20000);
+        }
       }
-    });
-
-    if (activeMessages.length === 0) {
-      console.log("発表中の情報はありません。");
-    } else if (!hasUpdate) {
-      console.log("情報内容に変更がないためスキップします。");
-    } else {
-      const sortedContent = activeMessages.sort().join('\n');
-      
-      let levelLabel = "注意報";
-      if (maxLevel === 1) levelLabel = "特別警報";
-      else if (maxLevel === 2) levelLabel = "警報・注意報";
-
-      const header = conf.TITLE_PREFIX + "気象情報" + conf.TITLE_SUFFIX;
-      const body = header + "\n" + levelLabel + "が発表されています。\n\n" + sortedContent;
-
-      postToBand(body);
-      console.log("投稿処理が完了しました。");
-      // 連続投稿によるAPI制限を回避するため20秒待機
-      Utilities.sleep(20000);
     }
 
-    // 地震・津波・火山フィードの監視
-    const feedUrl = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml";
-    const resFeed = UrlFetchApp.fetch(feedUrl);
+    // --- 2. 地震・津波・火山セクション ---
+    const resFeed = UrlFetchApp.fetch(conf.URL_FEED_EQVOL);
     const xmlFeed = resFeed.getContentText();
     const entries = xmlFeed.split("<entry>");
 
@@ -96,19 +80,17 @@ function checkJmaAndPostToBand() {
 
       const title = titleMatch[1];
       const detailUrl = linkMatch[1];
+      let currentPostBody = ""; // ループごとに個別の変数を使用
 
-      // 地震情報の判定（鎌倉市：震度3以上に限定）
+      // A. 地震情報の判定（鎌倉市：震度3以上に限定）
       if (title.includes("震源") || title.includes("震度")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
-        
-        // 鎌倉市の震度情報を抽出
-        const kamakuraMatch = xmlDetail.match(/<Area>.*?<Name>鎌倉市<\/Name>.*?<MaxInt>(.*?)<\/MaxInt>/s);
+        const kamakuraMatch = xmlDetail.match(new RegExp(`<Area>.*?<Name>${conf.CITY_NAME}<\/Name>.*?<MaxInt>(.*?)<\/MaxInt>`, "s"));
         
         if (kamakuraMatch) {
-          const kamakuraInt = kamakuraMatch[1]; // 観測された震度コード
-          const targetInts = ["3", "4", "5-", "5+", "6-", "6+", "7"]; // 投稿対象とする震度
-          
+          const kamakuraInt = kamakuraMatch[1];
+          const targetInts = ["3", "4", "5-", "5+", "6-", "6+", "7"];
           if (targetInts.includes(kamakuraInt)) {
             const epicenterMatch = xmlDetail.match(/<Hypocenter>.*?<Name>(.*?)<\/Name>/);
             const magnitudeMatch = xmlDetail.match(/<jmx_eb:Magnitude.*?>(.*?)<\/jmx_eb:Magnitude>/);
@@ -118,52 +100,52 @@ function checkJmaAndPostToBand() {
             if (epicenterMatch) detailMsg += "震源地：" + epicenterMatch[1] + "\n";
             if (magnitudeMatch) detailMsg += "規模：M" + magnitudeMatch[1] + "\n";
             if (maxIntMatch) detailMsg += "最大震度：" + maxIntMatch[1].replace(/(\d)[\+\-]/, (m, p1) => p1 + (m.includes('+') ? '強' : '弱')) + "\n";
-            
-            // 鎌倉市の震度を日本語表記に変換
             const kamakuraIntJP = kamakuraInt.replace("5-", "5弱").replace("5+", "5強").replace("6-", "6弱").replace("6+", "6強");
             detailMsg += "【鎌倉市の震度：" + kamakuraIntJP + "】";
-
-            postToBand(`#防災情報\n【地震情報】\n${detailMsg}`);
-            if (updated > latestDateTime) latestDateTime = updated;
-            Utilities.sleep(20000);
-          } else {
-            console.log(`鎌倉市の震度は ${kamakuraInt} のため投稿をスキップします。`);
+            currentPostBody = `#防災情報\n【地震情報】\n${detailMsg}`;
           }
         }
       }
 
-      // 津波情報の判定
-      if (title.includes("津波")) {
+      // B. 津波情報の判定
+      else if (title.includes("津波")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
-        if (xmlDetail.includes("相模湾・三浦半島")) {
+        if (xmlDetail.includes(conf.WATCH_TSUNAMI_REGION)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          postToBand(`#防災情報\n【津波情報】\n${headline}`);
-          if (updated > latestDateTime) latestDateTime = updated;
-          Utilities.sleep(20000);
+          currentPostBody = `#防災情報\n【津波情報】\n${headline}`;
         }
       }
 
-      // 火山情報の判定
-      if (title.includes("火山") || title.includes("降灰")) {
+      // C. 火山情報の判定
+      else if (title.includes("火山") || title.includes("降灰")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
-        const watchVolcanoes = ["富士山", "箱根山", "伊豆東部火山群"];
-        const isWatchVolcano = watchVolcanoes.some(v => xmlDetail.includes(v));
-        if (isWatchVolcano || xmlDetail.includes("神奈川県")) {
+        if (conf.WATCH_VOLCANOES.some(v => xmlDetail.includes(v)) || xmlDetail.includes(conf.PREF_NAME)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          postToBand(`#防災情報\n【火山・降灰情報】\n${headline}`);
-          if (updated > latestDateTime) latestDateTime = updated;
-          Utilities.sleep(20000);
+          currentPostBody = `#防災情報\n【火山・降灰情報】\n${headline}`;
         }
+      }
+
+      // 共通の投稿処理
+      if (currentPostBody !== "" && currentPostBody !== lastPostedContent) {
+        postToBand(currentPostBody);
+        scriptProps.setProperty('LAST_JMA_POST_CONTENT', currentPostBody);
+        console.log(`投稿完了: ${title}`);
+        Utilities.sleep(20000);
+      }
+      
+      // 更新日時の記録
+      if (updated > latestDateTime) {
+        latestDateTime = updated;
       }
     }
 
-    // 処理した最新時刻を保存
+    // 最後に一括して最新チェック時刻を更新
     if (latestDateTime !== lastCheck) {
-      PropertiesService.getScriptProperties().setProperty('LAST_JMA_DATETIME', latestDateTime);
+      scriptProps.setProperty('LAST_JMA_DATETIME', latestDateTime);
     }
 
   } catch (e) {
