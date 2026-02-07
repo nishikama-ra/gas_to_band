@@ -15,26 +15,23 @@ function MonthlySecPostToBand() {
     "3. 端末の管理について 📱\n\n" +
     "・画面ロックの設定 万が一の紛失に備え、スマホやPCには画面ロックを設定しましょう。また、外出先などで端末を放置しないよう気をつけましょう。";
 
-  // APIエンドポイントの定義
-  const endpoint = "https://openapi.band.us/v2.2/band/post/create";
-  
-  // 投稿パラメータの構成（ステッカー情報を追加）
+  // 送信パラメータの準備
   const payload = {
-    "access_token": CONFIG.BAND_ACCESS_TOKEN,
-    "band_key": CONFIG.TARGET_BAND_KEY,
-    "content": message,
-    "do_push": "true",
-    "sticker_package_id": "1", // パッケージID (1: Niz)
-    "sticker_id": "12"         // ステッカーID (12: 虫眼鏡で確認)
+    'access_token': CONFIG.BAND_ACCESS_TOKEN,
+    'band_key': CONFIG.TARGET_BAND_KEY,
+    'content': message,
+    'do_push': 'true',
+    'sticker_package_id': '1', // パッケージ: Niz (デフォルト)
+    'sticker_id': '1'          // 1: お辞儀（挨拶） / 12: 虫眼鏡（確認）
   };
 
   const options = {
-    "method": "post",
-    "payload": payload,
-    "muteHttpExceptions": true
+    'method': 'post',
+    'payload': payload,
+    'muteHttpExceptions': true
   };
 
-  // APIの実行
-  const response = UrlFetchApp.fetch(endpoint, options);
-  console.log("Response Body: " + response.getContentText());
+  // 実行とログ出力（エラー確認用）
+  const response = UrlFetchApp.fetch('https://openapi.band.us/v2.2/band/post/create', options);
+  console.log("BAND Response: " + response.getContentText());
 }
