@@ -169,14 +169,19 @@ function checkGmailAndPostToBand() {
 function createPostBody(message, senderEmail) {
   const configEntry = CONFIG.SENDERS[senderEmail];
   if (!configEntry) return null;
-  
+
   const rule = CONFIG.RULES[configEntry[0]];
   const tag = CONFIG.TAGS[configEntry[1]];
 
   const subject = message.getSubject() || "無題";
   const fullBody = message.getPlainBody() || "";
   let body = fullBody;
-  
+
+  // --- 【追加】Yahoo!路線情報の広告ブロックを事前に削除 ---
+  // 配信設定によってURLが異なるため、汎用的な正規表現で削除します
+  body = body.replace(/-------------------------\n▼遅延・運休の情報がすぐ届く[\s\S]*?https:\/\/yahoo\.jp\/[a-zA-Z0-9_-]+\n-------------------------/g, "");
+  // --------------------------------------------------
+
   // 1. 指定位置より上をカット
   if (rule.startAfter) {
     const startIndex = body.indexOf(rule.startAfter);
@@ -186,11 +191,12 @@ function createPostBody(message, senderEmail) {
   }
 
   // 2. 「救出」するフッター行の特定（Copyrightなど）
+  // ※ bodyからではなく、広告カット済みの全体から探すように修正
   let savedFooter = "";
   if (rule.keepFrom) {
-    const keepIndex = fullBody.indexOf(rule.keepFrom);
+    const keepIndex = body.indexOf(rule.keepFrom); // fullBodyからbodyに変更
     if (keepIndex !== -1) {
-      savedFooter = "\n-------------------------\n" + fullBody.substring(keepIndex).trim();
+      savedFooter = "\n-------------------------\n" + body.substring(keepIndex).trim();
     }
   }
 
@@ -202,20 +208,15 @@ function createPostBody(message, senderEmail) {
     }
   }
 
-  // 制御文字の除去
   const cleanBody = body.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
 
-  // 本文組み立て
   let content = "";
   if (tag) content += `${tag}\n`;
   content += `件名：${subject}\n`;
   if (rule.customHeader) content += `${rule.customHeader}\n`;
-
   content += `\n${cleanBody}`;
-
-  if (savedFooter) {
-    content += savedFooter;
-  }
+  if (savedFooter) content += savedFooter;
 
   return content;
 }
+
