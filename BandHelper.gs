@@ -39,7 +39,7 @@ function uploadFileToDrive(blob) {
  * BAND APIへ投稿内容を送信する
  */
 function postToBand(content, fileUrls = []) {
-  const endpoint = 'https://openapi.band.us/v2.2/band/post/create';
+  const control = CONFIG.BAND_POST_CONTROL;
   let finalContent = content;
 
   if (fileUrls.length > 0) {
@@ -53,26 +53,36 @@ function postToBand(content, fileUrls = []) {
     'do_push': true
   };
 
-  try {
-    const response = UrlFetchApp.fetch(endpoint, {
-      'method': 'post',
-      'payload': payload,
-      'muteHttpExceptions': true // エラー時も中身を読み取る
-    });
-    
-    const resText = response.getContentText();
-    const json = JSON.parse(resText);
-    
-    if (json.result_code === 1) {
-      return true;
-    } else {
-      // 失敗理由をログに出す
-      console.error(`BAND APIエラー: コード=${json.result_code}, 内容=${resText}`);
-      return false;
+  for (let i = 0; i < control.MAX_ATTEMPTS; i++) {
+    try {
+      const response = UrlFetchApp.fetch(control.ENDPOINT, {
+        'method': 'post',
+        'payload': payload,
+        'muteHttpExceptions': true
+      });
+
+      const resText = response.getContentText();
+      const json = JSON.parse(resText);
+
+      if (json.result_code === 1) {
+        return true;
+      } 
+      
+      if (json.result_code === 1003 && i < control.MAX_ATTEMPTS - 1) {
+        console.warn(`⚠️ BAND API衝突(1003)を検知。${control.RETRY_WAIT_MS / 1000}秒後にリトライします (${i + 1}/${control.MAX_ATTEMPTS})`);
+        Utilities.sleep(control.RETRY_WAIT_MS);
+        continue;
+      }
+
+      throw new Error(`コード=${json.result_code}, 内容=${resText}`);
+
+    } catch (e) {
+      if (i === control.MAX_ATTEMPTS - 1) {
+        console.error(`BAND APIエラー: ${e.message}`);
+        return false;
+      }
+      Utilities.sleep(control.RETRY_WAIT_MS);
     }
-  } catch (e) {
-    console.error(`通信自体に失敗しました: ${e.message}`);
-    return false;
   }
 }
 
@@ -80,10 +90,9 @@ function postToBand(content, fileUrls = []) {
  * 特定住所検知時に別のBANDへ投稿する専用関数（文言加工なし版）
  */
 function postToExtraBand(content, fileUrls = []) {
-  const endpoint = 'https://openapi.band.us/v2.2/band/post/create';
+  const control = CONFIG.BAND_POST_CONTROL;
   let finalContent = content;
 
-  // 添付ファイルがある場合のみ、末尾にURLを追加
   if (fileUrls.length > 0) {
     finalContent += "\n\n------------------\n添付資料\n" + fileUrls.join('\n');
   }
@@ -95,23 +104,37 @@ function postToExtraBand(content, fileUrls = []) {
     'do_push': true
   };
 
-  try {
-    const response = UrlFetchApp.fetch(endpoint, {
-      'method': 'post',
-      'payload': payload,
-      'muteHttpExceptions': true
-    });
+  for (let i = 0; i < control.MAX_ATTEMPTS; i++) {
+    try {
+      const response = UrlFetchApp.fetch(control.ENDPOINT, {
+        'method': 'post',
+        'payload': payload,
+        'muteHttpExceptions': true
+      });
 
-    const resText = response.getContentText();
-    const json = JSON.parse(resText);
+      const resText = response.getContentText();
+      const json = JSON.parse(resText);
 
-    if (json.result_code === 1) {
-      console.log("★成功：別BANDへの転送投稿が完了しました。");
-    } else {
-      console.error(`★失敗：別BAND投稿エラー: コード=${json.result_code}, 内容=${resText}`);
+      if (json.result_code === 1) {
+        console.log("★成功：別BANDへの転送投稿が完了しました。");
+        return;
+      }
+      
+      if (json.result_code === 1003 && i < control.MAX_ATTEMPTS - 1) {
+        console.warn(`⚠️ 転送投稿で制限(1003)発生。リトライします。`);
+        Utilities.sleep(control.RETRY_WAIT_MS);
+        continue;
+      }
+
+      throw new Error(`コード=${json.result_code}, 内容=${resText}`);
+
+    } catch (e) {
+      if (i === control.MAX_ATTEMPTS - 1) {
+        console.error(`★失敗：別BAND投稿エラー: ${e.message}`);
+        return;
+      }
+      Utilities.sleep(control.RETRY_WAIT_MS);
     }
-  } catch (e) {
-    console.error(`★エラー：通信エラーが発生しました: ${e.message}`);
   }
 }
 
@@ -133,3 +156,4 @@ function setBandDestination(mode) {
     throw new Error(`設定エラー: モード ${mode} の宛先キーがプロパティに見つかりません。`);
   }
 }
+
