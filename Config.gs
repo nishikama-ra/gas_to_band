@@ -11,6 +11,15 @@ const CONFIG = {
   IMAGE_FOLDER_ID: PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID'),
   
   MAX_THREADS_PER_RUN: 15,
+
+  // リトライ設定
+  BAND_POST_CONTROL: {
+    MAX_ATTEMPTS: 3,        // 合計試行回数（1回目 + リトライ2回）
+    RETRY_WAIT_MS: 10000,   // 1003エラー（混雑）検知時の待機時間（10秒）
+    ENDPOINT: 'https://openapi.band.us/v2.2/band/post/create'
+  },
+
+
   // --- タグ定義 ---
   TAGS: {
     BOUHAN: '#防犯',
@@ -103,7 +112,7 @@ const CONFIG = {
     LONGITUDE: "139.502873",
     TITLE: "【西鎌倉 3時間おき天気予報】",
     TAG: "#天気予報",
-    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点付近 (北緯35.322356/東経139.502873) / 提供: OpenWeatherMap",
+    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点付近 (北緯35.322356/東経139.502873)\n提供: OpenWeatherMap",
     WEATHER_FORECAST_COUNT: 12,
     
     // 実行制御（10分で見切り、1分弱でリトライ）
