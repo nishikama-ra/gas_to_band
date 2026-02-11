@@ -32,7 +32,7 @@ function renderAnnouncePortal(e) {
     "</div>" +
     
     "<p style='font-size: 0.9em; color: #7f8c8d;'>System Status: <span style='color: green; font-weight: bold;'>Operational / Verified</span></p>" +
-    "<p style='font-size: 0.8em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px;'>© 2024 Nishikamakura Jichikai. All rights reserved.</p>" +
+    "<p style='font-size: 0.8em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px;'>© 2025 Nishi-kamakura Residents' Association All Rights Reserved.</p>" +
     "</div>";
 
   return HtmlService.createHtmlOutput(portalHtml).setTitle("Nishikamakura Jichikai API Portal");
