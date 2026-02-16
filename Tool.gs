@@ -116,3 +116,9 @@ function countCategoryPosts() {
     console.error("エラーが発生しました: " + e.message);
   }
 }
+
+function resetBousaiMemory() {
+  PropertiesService.getScriptProperties().deleteProperty('LAST_JMA_POST_CONTENT');
+  PropertiesService.getScriptProperties().deleteProperty('LAST_JMA_DATETIME');
+  console.log("防災情報の投稿履歴をリセットしました。次回の実行で内容があれば投稿されます。");
+}
