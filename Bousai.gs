@@ -8,6 +8,10 @@ function checkJmaAndPostToBand() {
   
   const lastCheck = scriptProps.getProperty('LAST_JMA_DATETIME') || "";
   const lastPostedContent = scriptProps.getProperty('LAST_JMA_POST_CONTENT') || "";
+  // 前回の「警報・特別警報」のコードリストを保持して比較に使用する
+  const lastWarningCodesStr = scriptProps.getProperty('LAST_WARNING_CODES') || "";
+  const lastWarningCodes = lastWarningCodesStr ? lastWarningCodesStr.split(',') : [];
+
   let latestDateTime = lastCheck;
   let totalMessage = "";
 
@@ -27,38 +31,65 @@ function checkJmaAndPostToBand() {
     }
 
     if (cityData) {
-      let activeMessages = [];
-      let maxLevel = 3; 
-      let hasUpdate = false;
+      let currentWarningCodes = []; // 今回の警報・特別警報コード
+      let activeList = [];         // 現在有効な全情報の表示用
+      let changeMessages = [];      // 冒頭に表示する「解除/発表」の変化メッセージ
 
       cityData.warnings.forEach(w => {
-        const msg = master.special_warnings[w.code] || 
-                    master.warnings[w.code] || 
-                    master.advisories[w.code];
+        const code = w.code;
+        const isSpecial = !!master.special_warnings[code];
+        const isWarning = !!master.warnings[code];
         
-        if (msg) {
-          const statusLabel = (w.status === "解除") ? "（解除）" : "";
-          activeMessages.push(msg + statusLabel);
-          if (w.status !== "継続") hasUpdate = true;
-          if (w.status !== "解除") {
-            if (master.special_warnings[w.code]) maxLevel = Math.min(maxLevel, 1);
-            else if (master.warnings[w.code]) maxLevel = Math.min(maxLevel, 2);
-            else if (master.advisories[w.code]) maxLevel = Math.min(maxLevel, 3);
+        // 警報・特別警報であれば現在のコードリストに追加
+        if (isSpecial || isWarning) {
+          currentWarningCodes.push(code);
+        }
+
+        // 現在「発表」または「継続」中のものをリストアップ
+        if (w.status === "発表" || w.status === "継続") {
+          const masterText = master.special_warnings[code] || master.warnings[code] || master.advisories[code];
+          if (masterText) {
+            activeList.push(masterText);
           }
         }
       });
 
-      if (activeMessages.length > 0 && hasUpdate)
-      {
-        const sortedContent = activeMessages.sort().join('\n');
-        let levelLabel = (maxLevel === 1) ? "特別警報" : (maxLevel === 2) ? "警報・注意報" : "注意報";
-        const header = conf.TITLE_PREFIX + "気象情報" + conf.TITLE_SUFFIX;
-        totalMessage += header + "\n" + levelLabel + "が発表されています。\n\n" + sortedContent + "\n\n";
-        console.log("気象情報を集約に追加しました。");
+      // --- 変化の判定（警報・特別警報のみ） ---
+      const addedWarnings = currentWarningCodes.filter(c => !lastWarningCodes.includes(c));
+      const removedWarnings = lastWarningCodes.filter(c => !currentWarningCodes.includes(c));
+
+      // 1. 新しく発表された警報
+      addedWarnings.forEach(c => {
+        const name = (master.special_warnings[c] || master.warnings[c] || "").split('：')[0];
+        if (name) changeMessages.push(`${name}が発表されました。`);
+      });
+
+      // 2. 解除された警報
+      removedWarnings.forEach(c => {
+        const name = (master.special_warnings[c] || master.warnings[c] || "").split('：')[0];
+        if (name) changeMessages.push(`${name}は解除されました。`);
+      });
+
+      // 投稿用の気象メッセージ構築（警報・特別警報に変化があった場合のみ）
+      if (changeMessages.length > 0) {
+        let weatherBody = "【鎌倉市：気象情報】\n";
+        weatherBody += changeMessages.join('\n') + "\n\n";
+
+        if (activeList.length > 0) {
+          weatherBody += "現在、以下の情報が発表されています。\n";
+          weatherBody += activeList.join('\n');
+        } else if (currentWarningCodes.length === 0) {
+          weatherBody = "【鎌倉市：気象情報】\n警報・特別警報はすべて解除されました。";
+        }
+
+        totalMessage += weatherBody + "\n\n";
+        
+        // 次回比較用に現在の警報状態を保存
+        scriptProps.setProperty('LAST_WARNING_CODES', currentWarningCodes.join(','));
       }
     }
 
-    // --- 2. 地震・津波・火山セクション ---
+    // --- 2. 地震・津波・火山セクション（元のロジックを完全維持） ---
     const resFeed = UrlFetchApp.fetch(conf.URL_FEED_EQVOL);
     const xmlFeed = resFeed.getContentText();
     const entries = xmlFeed.split("<entry>");
@@ -82,7 +113,7 @@ function checkJmaAndPostToBand() {
         const resDetail = UrlFetchApp.fetch(detailUrl);
         const xmlDetail = resDetail.getContentText();
         const kamakuraMatch = xmlDetail.match(new RegExp(`<Area>.*?<Name>${conf.CITY_NAME}<\/Name>.*?<MaxInt>(.*?)<\/MaxInt>`, "s"));
-        
+
         if (kamakuraMatch) {
           const kamakuraInt = kamakuraMatch[1];
           const targetInts = ["3", "4", "5-", "5+", "6-", "6+", "7"];
@@ -90,7 +121,7 @@ function checkJmaAndPostToBand() {
             const epicenterMatch = xmlDetail.match(/<Hypocenter>.*?<Name>(.*?)<\/Name>/);
             const magnitudeMatch = xmlDetail.match(/<jmx_eb:Magnitude.*?>(.*?)<\/jmx_eb:Magnitude>/);
             const maxIntMatch = xmlDetail.match(/<MaxInt>(.*?)<\/MaxInt>/);
-            
+
             let detailMsg = "【地震情報】\n" + title + "\n";
             if (epicenterMatch) detailMsg += "震源地：" + epicenterMatch[1] + "\n";
             if (magnitudeMatch) detailMsg += "規模：M" + magnitudeMatch[1] + "\n";
@@ -102,7 +133,6 @@ function checkJmaAndPostToBand() {
           }
         }
       }
-
       // B. 津波情報の判定
       else if (title.includes("津波")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
@@ -114,7 +144,6 @@ function checkJmaAndPostToBand() {
           console.log(`津波情報を集約に追加: ${title}`);
         }
       }
-
       // C. 火山情報の判定
       else if (title.includes("火山") || title.includes("降灰")) {
         const resDetail = UrlFetchApp.fetch(detailUrl);
@@ -133,7 +162,7 @@ function checkJmaAndPostToBand() {
     }
 
     // --- 3. 統合投稿判定 ---
-    if (totalMessage !== "") {
+    if (totalMessage.trim() !== "") {
       const finalBody = "#防災\n\n" + totalMessage.trim();
       if (finalBody !== lastPostedContent) {
         postToBand(finalBody);
